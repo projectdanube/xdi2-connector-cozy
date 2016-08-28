@@ -132,8 +132,10 @@ public class CozyContributor extends AbstractContributor implements MessageEnvel
 
 			String value = relativeTargetStatement.getLiteralData().toString();
 
-			//user.get(relativeTargetStatement.getContextNodeXDIAddress()).addProperty("value", value);
-			//CozyContributor.this.cozyApi.put(user);
+			String cozyUrl = GraphUtil.retrieveCozyUrl(CozyContributor.this.getTokenGraph(), cozyUserXDIAddress);
+
+			user.put(relativeTargetStatement.getContextNodeXDIAddress(), relativeTargetStatement.getLiteralData().toString());
+			CozyContributor.this.cozyApi.put(cozyUrl, user);
 		} catch (Exception ex) {
 
 			throw new Xdi2MessagingException("Cannot save user data: " + ex.getMessage(), ex, executionContext);
@@ -159,8 +161,8 @@ public class CozyContributor extends AbstractContributor implements MessageEnvel
 
 		try {
 
-			String cozyEmail = GraphUtil.retrieveCozyUrl(CozyContributor.this.getTokenGraph(), cozyUserXDIAddress);
-			if (cozyEmail == null) {
+			String cozyUrl = GraphUtil.retrieveCozyUrl(CozyContributor.this.getTokenGraph(), cozyUserXDIAddress);
+			if (cozyUrl == null) {
 
 				log.warn("No Cozy email for context: " + cozyUserXDIAddress);
 				return new ContributorResult(true, false, true);
@@ -173,7 +175,7 @@ public class CozyContributor extends AbstractContributor implements MessageEnvel
 				return new ContributorResult(true, false, true);
 			}
 
-			user = CozyContributor.this.retrieveUser(executionContext, cozyEmail, cozyPassword);
+			user = CozyContributor.this.retrieveUser(executionContext, cozyUrl, cozyPassword);
 			if (user == null) throw new Exception("No user.");
 		} catch (Exception ex) {
 

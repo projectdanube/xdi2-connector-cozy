@@ -14,7 +14,7 @@ public class GraphUtil {
 		LiteralNode literalNode = graph.getDeepLiteralNode(contextNodeXDIAddress);
 
 		return literalNode == null ? null : literalNode.getLiteralDataString();*/
-		return "https://markus.cozycloud.cc/";
+		return "https://markus.cozycloud.cc";
 	}
 
 	public static String retrieveCozyPassword(Graph graph, XDIAddress cozyUserXDIAddress) {

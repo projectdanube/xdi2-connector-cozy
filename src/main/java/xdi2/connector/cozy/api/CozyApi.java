@@ -8,6 +8,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
@@ -19,6 +20,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import xdi2.core.syntax.XDIAddress;
 
@@ -28,7 +30,7 @@ public class CozyApi {
 
 	private String token1;
 	private String token2;
-	private String meid;
+	private JsonObject meobject;
 
 	public CozyApi() {
 
@@ -87,6 +89,7 @@ public class CozyApi {
 		Map<XDIAddress, String> me = new HashMap<XDIAddress, String> ();
 		String lastName = json2.get("n").getAsString(); lastName = lastName.substring(0, lastName.indexOf(";")); me.put(XDIAddress.create("<#last><#name>"), lastName);
 		String firstName = json2.get("n").getAsString(); firstName = firstName.substring(lastName.length()+1); firstName = firstName.substring(0, firstName.indexOf(";")); me.put(XDIAddress.create("<#first><#name>"), firstName);
+		meobject = json2;
 		JsonArray json3 = json2.getAsJsonArray("datapoints");
 		for (JsonElement json4 : json3) {
 			JsonElement name = ((JsonObject) json4).get("name");
@@ -108,5 +111,54 @@ public class CozyApi {
 		log.debug("ME = " + me);
 
 		return me;
+	}
+
+	synchronized public void put(String url, Map<XDIAddress, String> user) throws Exception {
+
+		log.debug("put()");
+
+		meobject.addProperty("fn", user.get(XDIAddress.create("<#first><#name>")) + user.get(XDIAddress.create("<#last><#name>")));
+		meobject.addProperty("n", user.get(XDIAddress.create("<#last><#name>")) + ";" + user.get(XDIAddress.create("<#first><#name>")) + ";;;");
+		JsonArray json3 = meobject.getAsJsonArray("datapoints");
+		for (JsonElement json4 : json3) {
+			JsonElement name = ((JsonObject) json4).get("name");
+			if (name == null || name instanceof JsonNull) continue;
+
+			if (name.getAsString().equals("adr")) {
+				JsonArray json5 = new JsonArray();
+				json5.add(new JsonPrimitive(""));
+				json5.add(new JsonPrimitive(""));
+				json5.add(new JsonPrimitive(user.get(XDIAddress.create("#address<#locality>")) + ", " + user.get(XDIAddress.create("#address<#country>"))));
+				json5.add(new JsonPrimitive(""));
+				json5.add(new JsonPrimitive(""));
+				json5.add(new JsonPrimitive(""));
+				json5.add(new JsonPrimitive(""));
+				((JsonObject) json4).add("value", json5);
+			}
+			if (name.getAsString().equals("email")) {
+				((JsonObject) json4).add("value", new JsonPrimitive(user.get(XDIAddress.create("<#email>"))));
+			}
+			if (name.getAsString().equals("tel")) {
+				((JsonObject) json4).add("value", new JsonPrimitive(user.get(XDIAddress.create("<#tel>"))));
+			}
+		}
+
+		System.out.println(meobject.toString());
+		System.out.println(url + "/apps/contacts/contacts/" + meobject.get("_id").getAsString());
+
+		try {
+
+			HttpClient client = HttpClientBuilder.create().build();
+			HttpPut put = new HttpPut(url + "/apps/contacts/contacts/" + meobject.get("_id").getAsString());
+			put.setHeader("Cookie", token1 + "; " + token2);
+			put.setHeader("Content-Type", "application/json");
+			put.setEntity(new StringEntity(meobject.toString()));
+
+			HttpResponse response = client.execute(put);
+			if (response.getStatusLine().getStatusCode() != 201) throw new RuntimeException("Unexpected response for user: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase());
+		} catch (Exception ex) {
+
+			throw new RuntimeException("Cannot put: " + ex.getMessage(), ex);
+		}
 	}
 }
