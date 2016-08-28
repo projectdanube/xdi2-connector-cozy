@@ -8,8 +8,6 @@ import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.gson.JsonObject;
-
 import xdi2.connector.cozy.api.CozyApi;
 import xdi2.connector.cozy.mapping.CozyMapping;
 import xdi2.connector.cozy.util.GraphUtil;
@@ -103,7 +101,7 @@ public class CozyContributor extends AbstractContributor implements MessageEnvel
 
 		// retrieve the Cozy user
 
-		Map<XDIAddress, JsonObject> user = null;
+		Map<XDIAddress, String> user = null;
 
 		try {
 
@@ -133,18 +131,9 @@ public class CozyContributor extends AbstractContributor implements MessageEnvel
 		try {
 
 			String value = relativeTargetStatement.getLiteralData().toString();
-			String oldvalue = user.get(relativeTargetStatement.getContextNodeXDIAddress()).get("value").getAsString();
-			if (relativeTargetStatement.getContextNodeXDIAddress().toString().equals("<#first><#name>")) {
-				if (oldvalue.contains(" ")) oldvalue = oldvalue.substring(oldvalue.indexOf(' ')+1);
-				value = value + " " + oldvalue;
-			}
-			if (relativeTargetStatement.getContextNodeXDIAddress().toString().equals("<#last><#name>")) {
-				if (oldvalue.contains(" ")) oldvalue = oldvalue.substring(0, oldvalue.indexOf(' '));
-				value = oldvalue + " " + value;
-			}
 
-			user.get(relativeTargetStatement.getContextNodeXDIAddress()).addProperty("value", value);
-			CozyContributor.this.cozyApi.put(user);
+			//user.get(relativeTargetStatement.getContextNodeXDIAddress()).addProperty("value", value);
+			//CozyContributor.this.cozyApi.put(user);
 		} catch (Exception ex) {
 
 			throw new Xdi2MessagingException("Cannot save user data: " + ex.getMessage(), ex, executionContext);
@@ -166,7 +155,7 @@ public class CozyContributor extends AbstractContributor implements MessageEnvel
 
 		// retrieve the Cozy user
 
-		Map<XDIAddress, JsonObject> user = null;
+		Map<XDIAddress, String> user = null;
 
 		try {
 
@@ -197,11 +186,9 @@ public class CozyContributor extends AbstractContributor implements MessageEnvel
 
 			ContextNode contextNode = operationResultGraph.setDeepContextNode(contributorsXDIAddress);
 
-			for (Entry<XDIAddress, JsonObject> entry : user.entrySet()) {
+			for (Entry<XDIAddress, String> entry : user.entrySet()) {
 
-				String value = entry.getValue().get("value").getAsString();
-				if (entry.getKey().toString().equals("<#first><#name>") && value.contains(" ")) value = value.substring(0, value.indexOf(' '));
-				if (entry.getKey().toString().equals("<#last><#name>") && value.contains(" ")) value = value.substring(value.indexOf(' ')+1);
+				String value = entry.getValue();
 
 				contextNode.setDeepContextNode(entry.getKey()).setLiteralString(value);
 			}
@@ -239,15 +226,15 @@ public class CozyContributor extends AbstractContributor implements MessageEnvel
 	 * Helper methods
 	 */
 
-	private Map<XDIAddress, JsonObject> retrieveUser(ExecutionContext executionContext, String email, String password) throws IOException, JSONException {
+	private Map<XDIAddress, String> retrieveUser(ExecutionContext executionContext, String url, String password) throws IOException, JSONException {
 
-		Map<XDIAddress, JsonObject> user = CozyContributorExecutionContext.getUser(executionContext, email);
+		Map<XDIAddress, String> user = CozyContributorExecutionContext.getUser(executionContext, url);
 
 		if (user == null) {
 
-			user = this.cozyApi.get(email, password);
+			user = this.cozyApi.get(url, password);
 
-			CozyContributorExecutionContext.putUser(executionContext, email, user);
+			CozyContributorExecutionContext.putUser(executionContext, url, user);
 		}
 
 		return user;

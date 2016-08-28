@@ -1,23 +1,15 @@
 package xdi2.connector.cozy.api;
 
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +26,8 @@ public class CozyApi {
 
 	private static final Logger log = LoggerFactory.getLogger(CozyApi.class);
 
-	private String token;
+	private String token1;
+	private String token2;
 	private String meid;
 
 	public CozyApi() {
@@ -49,128 +42,67 @@ public class CozyApi {
 
 	}
 
-	synchronized public Map<XDIAddress, JsonObject> get(String email, String password) {
+	synchronized public Map<XDIAddress, String> get(String url, String password) {
 
 		log.debug("get()");
 
 		try {
 
-			login(email, password);
-			meid();
-			return me();
+			login(url, password);
+			return me(url);
 		} catch (Exception ex) {
 
 			throw new RuntimeException("Cannot get: " + ex.getMessage(), ex);
 		}
 	}
 
-	synchronized public void put(Map<XDIAddress, JsonObject> user) {
-
-		log.debug("put()");
-
-		try {
-
-			HttpClient client = HttpClientBuilder.create().build();
-			HttpPut put = new HttpPut("https://api.meeco.me/v2/story/story_items/" + meid + ".json");
-			put.setHeader("Authorization", "Bearer " + token);
-
-			JsonArray json3 = new JsonArray();
-			for (Entry<XDIAddress, JsonObject> entry : user.entrySet()) {
-				json3.add(entry.getValue());
-			}
-			JsonObject json2 = new JsonObject();
-			json2.add("slots_attributes", json3);
-			json2.addProperty("name", "man");
-			json2.addProperty("label", "Markus");
-			json2.addProperty("ordinal", "4");
-			JsonObject json = new JsonObject();
-			json.add("story_item", json2);
-			put.setEntity(new StringEntity(json.toString()));
-			//put.setEntity(new InputStreamEntity(MeecoApi.class.getResourceAsStream("test")));
-			put.setHeader("Content-Type", "application/json; charset=UTF-8");
-			log.debug("USER = " + json.toString());
-
-			HttpResponse response = client.execute(put);
-			if (response.getStatusLine().getStatusCode() != 200) throw new RuntimeException("Unexpected response for user: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase());
-		} catch (Exception ex) {
-
-			throw new RuntimeException("Cannot put: " + ex.getMessage(), ex);
-		}
-	}
-
-	synchronized private void login(String email, String password) throws Exception {
+	synchronized private void login(String url, String password) throws Exception {
 
 		HttpClient client = HttpClientBuilder.create().build();
-		HttpPost post = new HttpPost("https://api.meeco.me/v2/session/login");
+		HttpPost post = new HttpPost(url + "/login");
 
-		List<NameValuePair> pairs = new ArrayList<NameValuePair> ();
-		pairs.add(new BasicNameValuePair("grant_type", "password"));
-		pairs.add(new BasicNameValuePair("email", email));
-		pairs.add(new BasicNameValuePair("password", password));
-		post.setEntity(new UrlEncodedFormEntity(pairs));
+		post.setEntity(new StringEntity("{\"password\":\"354972f5\",\"authcode\":\"\"}"));
 
 		HttpResponse response = client.execute(post);
-		if (response.getStatusLine().getStatusCode() != 201) throw new RuntimeException("Unexpected response for user: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase());
+		System.out.println(response.getStatusLine());
 
-		this.token = response.getHeaders("Set-Cookie")[0].getValue().substring("token=".length(), response.getHeaders("Set-Cookie")[0].getValue().indexOf(';'));
-		log.debug("TOKEN = " + token);
+		this.token1 = response.getHeaders("Set-Cookie")[0].getValue();
+		this.token2 = response.getHeaders("Set-Cookie")[1].getValue();
+		log.debug("TOKEN1 = " + token1);
+		log.debug("TOKEN2 = " + token2);
 	}
 
-	/*	private void user() throws Exception {
-
-		HttpGet get = new HttpGet("https://api.meeco.me/v2/user");
-		get.setHeader("Authorization", "Bearer " + token);
-
-		HttpResponse response = client.execute(get);
-		if (response.getStatusLine().getStatusCode() != 200) throw new RuntimeException("Unexpected response for user: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase());
-		String body = EntityUtils.toString(response.getEntity(), "UTF-8");
-	}*/
-
-	synchronized private void meid() throws Exception {
+	synchronized private Map<XDIAddress, String> me(String url) throws Exception {
 
 		HttpClient client = HttpClientBuilder.create().build();
-		HttpGet get = new HttpGet("https://api.meeco.me/v2/story/story_items.json");
-		get.setHeader("Authorization", "Bearer " + token);
+		HttpGet get = new HttpGet(url + "/apps/contacts/contacts");
+		get.setHeader("Cookie", token1 + "; " + token2);
 
 		HttpResponse response = client.execute(get);
 		if (response.getStatusLine().getStatusCode() != 200) throw new RuntimeException("Unexpected response for user: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase());
 		String body = EntityUtils.toString(response.getEntity(), "UTF-8");
 
-		JsonObject json = new Gson().fromJson(body, JsonObject.class);
-		JsonArray json2 = json.getAsJsonArray("story_items");
-		for (JsonElement json3 : json2) {
-			if (((JsonObject) json3).get("me").getAsBoolean() == true) {
-				meid = ((JsonObject) json3).get("id").getAsString();
-				break;
-			}
-		}
-		log.debug("MEID = " + meid);
-	}
-
-	synchronized private Map<XDIAddress, JsonObject> me() throws Exception {
-
-		HttpClient client = HttpClientBuilder.create().build();
-		HttpGet get = new HttpGet("https://api.meeco.me/v2/story/story_items/" + meid + ".json");
-		get.setHeader("Authorization", "Bearer " + token);
-
-		HttpResponse response = client.execute(get);
-		if (response.getStatusLine().getStatusCode() != 200) throw new RuntimeException("Unexpected response for user: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase());
-		String body = EntityUtils.toString(response.getEntity(), "UTF-8");
-
-		JsonObject json = new Gson().fromJson(body, JsonObject.class);
-		Map<XDIAddress, JsonObject> me = new HashMap<XDIAddress, JsonObject> ();
-		JsonArray json2 = json.getAsJsonArray("slots");
-		for (JsonElement json3 : json2) {
-			JsonElement name = ((JsonObject) json3).get("name");
+		JsonArray json = new Gson().fromJson(body, JsonArray.class);
+		JsonObject json2 = (JsonObject) json.get(0);
+		Map<XDIAddress, String> me = new HashMap<XDIAddress, String> ();
+		String lastName = json2.get("n").getAsString(); lastName = lastName.substring(0, lastName.indexOf(";")); me.put(XDIAddress.create("<#last><#name>"), lastName);
+		String firstName = json2.get("n").getAsString(); firstName = firstName.substring(lastName.length()+1); firstName = firstName.substring(0, firstName.indexOf(";")); me.put(XDIAddress.create("<#first><#name>"), firstName);
+		JsonArray json3 = json2.getAsJsonArray("datapoints");
+		for (JsonElement json4 : json3) {
+			JsonElement name = ((JsonObject) json4).get("name");
 			if (name == null || name instanceof JsonNull) continue;
 
-			if (name.getAsString().equals("slots_attributes_city")) me.put(XDIAddress.create("#address<#locality>"), (JsonObject) json3);
-			if (name.getAsString().equals("slots_attributes_country")) me.put(XDIAddress.create("#address<#country>"), (JsonObject) json3);
-			if (name.getAsString().equals("slots_attributes_email")) me.put(XDIAddress.create("<#email>"), (JsonObject) json3);
-			if (name.getAsString().equals("full_name")) {
-
-				me.put(XDIAddress.create("<#first><#name>"), (JsonObject) json3);
-				me.put(XDIAddress.create("<#last><#name>"), (JsonObject) json3);
+			if (name.getAsString().equals("adr")) {
+				JsonArray json5 = ((JsonObject) json4).getAsJsonArray("value");
+				String adr = json5.get(2).getAsString();
+				me.put(XDIAddress.create("#address<#locality>"), adr.substring(0, adr.indexOf(", ")));
+				me.put(XDIAddress.create("#address<#country>"), adr.substring(adr.indexOf(", ")+2));
+			}
+			if (name.getAsString().equals("email")) {
+				me.put(XDIAddress.create("<#email>"), ((JsonObject) json4).get("value").getAsString());
+			}
+			if (name.getAsString().equals("tel")) {
+				me.put(XDIAddress.create("<#tel>"), ((JsonObject) json4).get("value").getAsString());
 			}
 		}
 		log.debug("ME = " + me);
