@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-2.0.xsd">
+
+	<!-- XDI ENDPOINT REGISTRY AND TRANSPORT -->
+
+	<bean id="UriMessagingTargetRegistry" class="xdi2.transport.registry.impl.uri.UriMessagingTargetRegistry" init-method="init" destroy-method="shutdown" />
+
+	<bean id="HttpTransport" class="xdi2.transport.impl.http.HttpTransport" init-method="init" destroy-method="shutdown">
+		<property name="uriMessagingTargetRegistry" ref="UriMessagingTargetRegistry" />
+		<property name="interceptors">
+			<util:list>
+				<bean class="xdi2.transport.impl.http.interceptor.impl.DebugHttpTransportInterceptor" />
+				<bean class="xdi2.transport.impl.http.interceptor.impl.StatusHttpTransportInterceptor" />
+			</util:list>
+		</property>
+	</bean>
+
+	<!-- SPRING -->
+
+	<bean id="conversionService" class="org.springframework.context.support.ConversionServiceFactoryBean">
+		<property name="converters">
+			<list>
+				<bean class="xdi2.transport.spring.XDI2SpringConverter" />
+			</list>
+		</property>
+	</bean>
+
+	<!-- WEB SERVLET -->
+
+	<bean id="ClientServlet" class="xdi2.connector.cozy.client.ClientServlet" init-method="init" destroy-method="destroy">
+		<property name="graph" ref="graph1" />
+		<property name="cozyApi" ref="cozyApi" />
+		<property name="cozyMapping" ref="cozyMapping" />
+	</bean>
+
+	<!-- MEECO CONNECTOR -->
+
+	<bean id="cozyMappingGraphfactory" class="xdi2.core.impl.wrapped.classpath.ClasspathWrapperGraphFactory">
+		<property name="classpath" value="/xdi2/connector/cozy/mapping/mapping.xdi" />
+		<property name="mimeType" value="text/xdi;ordered=1" />
+	</bean>
+
+	<bean id="cozyMappingGraph" factory-bean="cozyMappingGraphfactory" factory-method="openGraph" />
+
+	<bean id="cozyContributor" class="xdi2.connector.cozy.contributor.CozyContributor">
+		<property name="cozyApi" ref="cozyApi" />
+		<property name="cozyMapping" ref="cozyMapping" />
+	</bean>
+
+	<bean id="cozyApi" class="xdi2.connector.cozy.api.CozyApi" init-method="init" destroy-method="destroy" />
+
+	<bean id="cozyMapping" class="xdi2.connector.cozy.mapping.CozyMapping" />
+
+	<!-- MESSAGING TARGET at /graph -->
+	<!-- MessagingTarget: GraphMessagingTarget backed by a MemoryGraph -->
+
+	<bean id="graphfactory1" class="xdi2.core.impl.memory.MemoryGraphFactory">
+	</bean>
+
+	<bean id="graph1" factory-bean="graphfactory1" factory-method="openGraph">
+		<constructor-arg><value>(=!:uuid:1111)</value></constructor-arg>
+	</bean>
+
+	<bean name="/graph" class="xdi2.messaging.target.impl.graph.GraphMessagingTarget">
+		<property name="graph" ref="graph1" />
+		<property name="interceptors">
+			<util:list>
+				<bean class="xdi2.messaging.target.interceptor.impl.BootstrapInterceptor">
+					<property name="bootstrapOwner" value="=!:uuid:1111" />
+					<property name="bootstrapOwnerSynonyms">
+						<util:list>
+							<value>=alice</value>
+						</util:list>
+					</property>
+					<property name="bootstrapRootLinkContract" value="true" />
+					<property name="bootstrapPublicLinkContract" value="true" />
+				</bean>
+				<bean class="xdi2.messaging.target.interceptor.impl.RefInterceptor" />
+				<ref bean="cozyContributor" />
+			</util:list>
+		</property>
+		<property name="contributors">
+			<util:list>
+				<bean id="generateKeyContributor" class="xdi2.messaging.target.contributor.impl.keygen.GenerateKeyContributor" />
+				<ref bean="cozyContributor" />
+			</util:list>
+		</property>
+	</bean>
+
+	<!-- MESSAGING TARGET at /mapping -->
+	<!-- MessagingTarget: GraphMessagingTarget -->
+
+	<bean name="/mapping" class="xdi2.messaging.target.impl.graph.GraphMessagingTarget">
+		<property name="graph" ref="cozyMappingGraph" />
+	</bean>
+
+</beans>

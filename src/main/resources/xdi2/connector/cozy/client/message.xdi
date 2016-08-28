@@ -1,0 +1,7 @@
+=!:uuid:1111[$msg]*!:uuid:1234/$is()/(=!:uuid:1111)
+=!:uuid:1111[$msg]*!:uuid:1234$do/$get/(https://meeco.me/)=!:uuid:1111<#email>
+=!:uuid:1111[$msg]*!:uuid:1234$do/$get/(https://meeco.me/)=!:uuid:1111<#password>
+=!:uuid:1111[$msg]*!:uuid:1234$do/$get/(https://meeco.me/)=!:uuid:1111<#~first_name>
+=!:uuid:1111[$msg]*!:uuid:1234$do/$get/(https://meeco.me/)=!:uuid:1111<#~last_name>
+=!:uuid:1111[$msg]*!:uuid:1234$do/$get/(https://meeco.me/)=!:uuid:1111<#~gender>
+=!:uuid:1111[$msg]*!:uuid:1234$do/$get/(https://meeco.me/)=!:uuid:1111<#~email>
