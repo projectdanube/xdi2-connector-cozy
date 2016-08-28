@@ -105,7 +105,7 @@ public class CozyApi {
 				me.put(XDIAddress.create("<#email>"), ((JsonObject) json4).get("value").getAsString());
 			}
 			if (name.getAsString().equals("tel")) {
-				me.put(XDIAddress.create("<#tel>"), ((JsonObject) json4).get("value").getAsString());
+				me.put(XDIAddress.create("<#phone>"), ((JsonObject) json4).get("value").getAsString());
 			}
 		}
 		log.debug("ME = " + me);
@@ -139,7 +139,7 @@ public class CozyApi {
 				((JsonObject) json4).add("value", new JsonPrimitive(user.get(XDIAddress.create("<#email>"))));
 			}
 			if (name.getAsString().equals("tel")) {
-				((JsonObject) json4).add("value", new JsonPrimitive(user.get(XDIAddress.create("<#tel>"))));
+				((JsonObject) json4).add("value", new JsonPrimitive(user.get(XDIAddress.create("<#phone>"))));
 			}
 		}
 
