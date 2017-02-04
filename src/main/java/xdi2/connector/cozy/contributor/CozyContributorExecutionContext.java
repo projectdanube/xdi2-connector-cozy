@@ -6,7 +6,7 @@ import java.util.Map;
 import org.json.JSONObject;
 
 import xdi2.core.syntax.XDIAddress;
-import xdi2.messaging.target.execution.ExecutionContext;
+import xdi2.messaging.container.execution.ExecutionContext;
 
 /**
  * Methods for storing state related to the CozyContributor.
